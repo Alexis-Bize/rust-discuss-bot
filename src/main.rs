@@ -10,6 +10,7 @@ extern crate rusqlite;
 mod models;
 mod messages;
 mod repository;
+mod token;
 
 use models::*;
 use messages::*;

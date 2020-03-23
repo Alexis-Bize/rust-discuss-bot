@@ -1,5 +1,6 @@
 use rocket_contrib::json::{Json, JsonValue};
 use reqwest::blocking::Client;
+use crate::token::*;
 
 pub fn get_fail_message(kind: &str)-> Json<JsonValue> {
     Json(json!({
@@ -112,7 +113,7 @@ pub fn send_response(succeed: bool, response_url: String){
     let client = Client::new();
     client.post(&response_url)
         .header("content-Type", "application/json")
-        .header("authorization", "Bearer {your token here}")
+        .header("authorization", format!("Bearer {}", get_token()))
         .body(r#"{
                 "replace_original": "true",
                 "text": "Thanks for your request, we'll process it and get back to you.",
