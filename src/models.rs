@@ -43,3 +43,23 @@ pub struct Choice {
 pub struct SlackPayload {
     pub payload: String
 }
+
+pub struct SqlUser {
+    pub id: String
+}
+
+pub struct SqlTopic {
+    pub id: u32,
+    pub name: String
+}
+
+pub struct SqlUrl {
+    pub id: u32,
+    pub value: String,
+    pub topics: Vec<SqlTopic>
+}
+
+pub struct SqlUserUrlResult {
+    pub user: SqlUser,
+    pub url: SqlUrl
+}

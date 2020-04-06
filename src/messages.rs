@@ -1,6 +1,7 @@
 use rocket_contrib::json::{Json, JsonValue};
 use reqwest::blocking::Client;
 use crate::token::*;
+use crate::models;
 
 pub fn get_fail_message(kind: &str)-> Json<JsonValue> {
     Json(json!({
@@ -23,19 +24,6 @@ pub fn get_success_message(kind: &str) -> Json<JsonValue>{
                 "text": {
                     "type": "mrkdwn",
                     "text": format!("success: {}", kind)
-                }
-            }
-        ]}))
-}
-
-pub fn get_topics_message(_topics: Vec<(u32,String)>) -> Json<JsonValue> {
-    Json(json!({
-        "blocks": [
-            {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": "topics"
                 }
             }
         ]}))
@@ -109,6 +97,41 @@ pub fn get_topics_choice_message(url: String) -> Json<JsonValue> {
     Json(message)
 }
 
+pub fn get_topics_option_message(topics: Vec<(u32, String)>) -> Json<JsonValue> {
+    let mut message =json!({ "options" : []});
+    let options = message["options"].as_array_mut().unwrap();
+    for topic in topics {
+        let s = format!("{}{}{}{}{}", r#"{"text": {
+                                                "type": "plain_text",
+                                                "text": ""#, &topic.1.to_string(), r#"",
+                                                "emoji": true
+                                            },
+                                            "value": ""#, &topic.0.to_string(), r#""
+                                        }"#);
+        let value: serde_json::Value = serde_json::from_str(&s).unwrap();
+        options.push(value)
+    }
+
+    Json(message)
+}
+
+pub fn get_topics_message(topics: &Vec<(u32, String)>) -> Json<JsonValue> {
+    let mut message =json!({ "blocks" : []});
+    let options = message["blocks"].as_array_mut().unwrap();
+    for topic in topics {
+        let s = format!("{}{}{}", r#"{  "type": "section",
+                                            "text": {
+                                                "type": "plain_text",
+                                                "text": ""#, &topic.1.to_string(), r#""
+                                            }
+                                        }"#);
+        let value: serde_json::Value = serde_json::from_str(&s).unwrap();
+        options.push(value)
+    }
+
+    Json(message)
+}
+
 pub fn send_response(succeed: bool, response_url: String){
     let client = Client::new();
     client.post(&response_url)
@@ -123,16 +146,51 @@ pub fn send_response(succeed: bool, response_url: String){
         .unwrap();
 }
 
-// fn send_hello_world_message(){
-//     let client = Client::new();
-//     client.post("https://slack.com/api/chat.postMessage")
-//         .header("content-Type", "application/json")
-//         .header("authorization", "Bearer {your token here}")
-//         .body("{
-//             \"as_user\": true,
-//             \"channel\": \"UVBSUR8UX\",
-//             \"text\": \"Hello, world\"
-//             }")
-//         .send()
-//         .unwrap();
-// }
+pub fn send_discuss_message(user_chan: &String, urls: &Vec<models::SqlUrl>) {
+        let client = Client::new();
+        let mut message =json!({
+            "as_user": true,
+            "channel": user_chan,
+            "attachments": [ ]
+        });
+
+        let attachments = message["attachments"].as_array_mut().unwrap();
+        for url in urls {
+            let s = format!("{}{}{}{}{}", r#"{  "type": "section",
+                                            "text": ""#, url.value,r#"\n`"#, url.topics[0].name,r#"`"
+                                        }"#);
+            let value: serde_json::Value = serde_json::from_str(&s).unwrap();
+            attachments.push(value);
+        }
+        let message_str = serde_json::to_string(&message).unwrap();
+        println!("{}", message_str);
+        // let message = format!("{}{}{}", r#"{
+        //                                     "as_user": true,
+        //                                     "channel": ""#, user_chan, r#"",
+        //                                     "attachments": [ { "text": "Hello, world" } ]
+        //                                     }
+        //                                 }"#);
+
+        client.post("https://slack.com/api/chat.postMessage")
+            .header("content-Type", "application/json")
+            .header("authorization", format!("Bearer {}", get_token()))
+            .body(message_str)
+            .send()
+            .unwrap();
+}
+
+pub fn send_hello_world_message(){
+    let client = Client::new();
+    let message = format!("{}{}{}", r#"{
+                                        "as_user": true,
+                                        "channel": ""#, "UVBSUR8UX", r#"",
+                                        "attachments": [ { "text": "https://medium.com/androiddevelopers/alter-type-with-typealias-4c03302fbe43" } ]
+                                        }
+                                    }"#);
+    client.post("https://slack.com/api/chat.postMessage")
+        .header("content-Type", "application/json")
+        .header("authorization", format!("Bearer {}", get_token()))
+        .body(message)
+        .send()
+        .unwrap();
+}
