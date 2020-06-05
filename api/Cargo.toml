@@ -30,3 +30,7 @@ features = ["json"]
 [dependencies.rusqlite]
 version = "0.21.0"
 features = ["bundled"]
+
+[[bin]]
+name="main"
+path="main.rs"
