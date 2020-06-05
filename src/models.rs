@@ -36,7 +36,15 @@ pub struct User {
 
 #[derive(Serialize, Deserialize)]
 pub struct Choice {
+    pub text: Text,
     pub value: String
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Text {
+    pub r#type: String,
+    pub text: String,
+    pub emoji: bool
 }
 
 #[derive(Serialize, Deserialize, FromForm)]

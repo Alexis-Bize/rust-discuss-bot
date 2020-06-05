@@ -97,7 +97,7 @@ pub fn get_topics_choice_message(url: String) -> Json<JsonValue> {
     Json(message)
 }
 
-pub fn get_topics_option_message(topics: Vec<(u32, String)>) -> Json<JsonValue> {
+pub fn get_topics_option_message(topics: Vec<(i32, String)>) -> Json<JsonValue> {
     let mut message =json!({ "options" : []});
     let options = message["options"].as_array_mut().unwrap();
     for topic in topics {
@@ -115,20 +115,30 @@ pub fn get_topics_option_message(topics: Vec<(u32, String)>) -> Json<JsonValue> 
     Json(message)
 }
 
-pub fn get_topics_message(topics: &Vec<(u32, String)>) -> Json<JsonValue> {
+pub fn get_topics_message(topics: &Vec<(i32, String)>) -> Json<JsonValue> {
     let mut message =json!({ "blocks" : []});
     let options = message["blocks"].as_array_mut().unwrap();
-    for topic in topics {
-        let s = format!("{}{}{}", r#"{  "type": "section",
-                                            "text": {
-                                                "type": "plain_text",
-                                                "text": ""#, &topic.1.to_string(), r#""
-                                            }
-                                        }"#);
-        let value: serde_json::Value = serde_json::from_str(&s).unwrap();
-        options.push(value)
+    let s: String;
+    if(topics.len() > 0) {
+        let onlyTopics : Vec<String> = topics.into_iter().map(|x| {(&x.1).to_string()}).collect();
+        let topicsStr = onlyTopics.join(r#"` `"#).to_string();
+        s = format!("{}{}{}", r#"{  "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "`"#, &topicsStr ,r#"`"
+            }
+        }"#);
+    } else {
+        s = r#"{  "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": "You aren't registred to any topics."
+            }
+        }"#.to_string();
     }
 
+    let value: serde_json::Value = serde_json::from_str(&s).unwrap();
+    options.push(value);
     Json(message)
 }
 

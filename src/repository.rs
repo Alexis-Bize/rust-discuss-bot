@@ -47,7 +47,7 @@ pub fn initialize_dataset() -> Result<()> {
     Ok(())
 }
 
-pub fn get_topics(starting_with:String) -> Vec<(u32, String)> {
+pub fn get_topics(starting_with:String) -> Vec<(i32, String)> {
     let conn = Connection::open("discuss.db").unwrap();
     let like_choice_stmt =
         format!("SELECT t.id, t.name from topics t
@@ -55,14 +55,31 @@ pub fn get_topics(starting_with:String) -> Vec<(u32, String)> {
     let mut stmt = conn.prepare(&like_choice_stmt).unwrap();
     let mut rows = stmt.query(NO_PARAMS).unwrap();
 
-    let mut topics: Vec<(u32, String)> = Vec::new();
+    let mut topics: Vec<(i32, String)> = Vec::new();
     while let Some(row) = rows.next().unwrap() {
         topics.push((row.get(0).unwrap(), row.get(1).unwrap()));
     }
     topics
 }
 
-pub fn add_discuss(url: &String, topics_id: Vec<&String>) -> bool{
+pub fn get_user_topics(user_id: &str) -> Vec<(i32, String)> {
+    let conn = Connection::open("discuss.db").unwrap();
+    let like_choice_stmt =
+        format!("SELECT t.id, t.name from topics t
+        INNER JOIN user_topics_junction user_topics
+        WHERE t.id = user_topics.topic_id
+        AND user_topics.user_id LIKE '{}%'",&user_id);
+    let mut stmt = conn.prepare(&like_choice_stmt).unwrap();
+    let mut rows = stmt.query(NO_PARAMS).unwrap();
+
+    let mut topics: Vec<(i32, String)> = Vec::new();
+    while let Some(row) = rows.next().unwrap() {
+        topics.push((row.get(0).unwrap(), row.get(1).unwrap()));
+    }
+    topics
+}
+
+pub fn add_discuss(url: &String, topics: Vec<(&String, &String)>) -> bool{
     let conn = Connection::open("discuss.db").unwrap();
     conn.execute(
         "INSERT INTO urls (url) values (?1)",
@@ -70,13 +87,24 @@ pub fn add_discuss(url: &String, topics_id: Vec<&String>) -> bool{
     ).unwrap();
 
     let last_id: String = conn.last_insert_rowid().to_string();
-    println!("{}", last_id);
 
-    for topic_id in topics_id {
+    for topic in topics {
+        println!("TEXT : {}", topic.1);
+        let mut topic_id = topic.0.to_string();
+        if(0 > topic.0.parse::<i32>().unwrap()){
+            conn.execute(
+                "INSERT INTO topics (name)
+                SELECT ?1
+                WHERE NOT EXISTS (SELECT 1 FROM topics WHERE name = ?1)",
+                &[topic.1],
+            ).unwrap();
+            topic_id = conn.last_insert_rowid().to_string();
+        }
         conn.execute(
             "INSERT INTO url_topic_junction (url_id, topic_id, added_date) values (?1, ?2, datetime('now'))",
             &[&last_id, &topic_id],
         ).unwrap();
+
     }
     true
 }
@@ -93,10 +121,21 @@ pub fn add_topic(topic: &str){
 
 pub fn register_user_to_topic(user: &str, topic: &str) {
     let conn = Connection::open("discuss.db").unwrap();
-    conn.execute(
+    let res = conn.execute(
         "INSERT INTO user_topics_junction (user_id, topic_id, send_date)
         SELECT ?1, t.id, datetime('now')
-        FROM topics t WHERE name = ?2",
+        FROM topics t WHERE LOWER(t.name) = LOWER(?2)",
+        &[user, topic],
+    ).unwrap();
+    println!("{} {} {}", res, user, topic);
+}
+
+pub fn unregister_user_to_topic(user: &str, topic: &str) {
+    let conn = Connection::open("discuss.db").unwrap();
+    conn.execute(
+        "DELETE FROM user_topics_junction
+        WHERE user_id = ?1
+        AND topic_id = (SELECT id FROM topics WHERE LOWER(name) = LOWER(?2))",
         &[user, topic],
     ).unwrap();
 }
