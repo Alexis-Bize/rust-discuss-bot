@@ -1,7 +1,5 @@
 {
-	"functions": {
-		"api/main.rs": {
-			"runtime": "now-rust@2.0.0"
-		}
-	}
+	"version": 2,
+	"builds": [{ "src": "api/Cargo.toml", "use": "now-rust", "config": { "rust": "1.31" } }]
+
 }
