@@ -2,4 +2,5 @@
 *.db
 token.rs
 
+*.lock
 .vercel
